@@ -1,0 +1,197 @@
+// Sends a message to debug listeners
+misty.Debug("The HelloWorld skill challenge is starting!")
+
+// Global Variables for _breathingLED RGB values
+_colorloop = 0;
+_red = 140 / 10.0;
+_green = 0 / 10.0;
+_blue = 0 / 220.0;
+
+// Changes RGB values depending on loop value for _breathingLED
+function ledColor() {
+    switch(_colorloop) {
+        case 1: // Red
+            _red = 220 / 10.0;
+            _green = 0 / 10.0;
+            _blue = 0 / 10.0;
+            break;
+        case 2: // Yellow
+            _red = 220 / 10.0;
+            _green = 220 / 10.0;
+            _blue = 0 / 10.0;
+            break;
+        case 3: // Green
+            _red = 0 / 10.0;
+            _green = 220 / 10.0;
+            _blue = 0 / 10.0;
+            break;
+        case 4: // Cyan
+            _red = 0 / 10.0;
+            _green = 220 / 10.0;
+            _blue = 220 / 10.0;
+            break;
+        case 5: // Blue
+            _red = 0 / 10.0;
+            _green = 0 / 10.0;
+            _blue = 220 / 10.0;
+            break;
+        default: // Purple                   
+            _red = 140 / 10.0;
+            _green = 0 / 10.0;
+            _blue = 220 / 10.0;
+    }
+}
+
+
+// Plays an audio file at max volume.
+misty.PlayAudio("s_Amazement.wav", 100);
+// Pauses for 3000 milliseconds before executing the next command.
+misty.Pause(3000);
+
+// Returns a random integer between min and max
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+misty.RegisterTimerEvent("look_around", getRandomInt(5, 10) * 1000, false);
+
+// The look_around timer event invokes this callback function.
+function _look_around(repeat = true) {
+
+    // Moves Misty's head to a random position. Adjust the min/max
+    // values passed into getRandomInt() to change Misty's range of
+    // motion when she calls this method.
+    misty.MoveHeadDegrees(
+        getRandomInt(-40, -10), // Random pitch position between -40 and 20
+        getRandomInt(-20, 20), // Random roll position between -30 and 30
+        getRandomInt(-25, 25), // Random yaw position between -40 and 40
+        30); // Head movement velocity. Can increase up to 100.
+
+        // If repeat is set to true, re-registers for the look_around
+        // timer event, and Misty moves her head until the skill ends.
+        if (repeat) misty.RegisterTimerEvent(
+            "look_around",
+            getRandomInt(5, 10) * 1000,
+            false);
+    
+}
+
+
+// Registers for a timer event called breathingLED, and invokes the
+// _breathingLED() callback after 1 millisecond.
+misty.RegisterTimerEvent("breathingLED", 1, false);
+
+// The breathingLED timer event invokes this callback function.
+function _breathingLED() {
+
+    // calls function to update global color variable
+    ledColor();
+
+    // Incrementally DECREASES the intensity of each color in the LED
+    for (var i = 10; i >= 0; i = i - 1) {
+        misty.ChangeLED(
+            Math.floor(i * _red), // red intensity ***CHANGED TO GLOBAL VAR***
+            Math.floor(i * _green), // green intensity ***CHANGED TO GLOBAL VAR***
+            Math.floor(i * _blue)); // blue intensity ***CHANGED TO GLOBAL VAR***
+        // Pause before next iteration. Increase value for slower
+        // breathing; decrease for faster breathing.
+        misty.Pause(150);
+    }
+
+    // Goes to next color
+    _colorloop = _colorloop + 1;
+
+    // Resets list back to beginning if cycle complete
+    if(_colorloop > 5) {
+        _colorloop = 0;
+    }
+
+    // calls function to update global color variable
+    ledColor();
+
+    // Incrementally INCREASES the intensity of each color in the LED
+    for (var i = 0; i <= 10; i = i + 1) {
+        misty.ChangeLED(
+            Math.floor(i * _red), // red intensity ***CHANGED TO GLOBAL VAR***
+            Math.floor(i * _green), // green intensity ***CHANGED TO GLOBAL VAR***
+            Math.floor(i * _blue)); // blue intensity ***CHANGED TO GLOBAL VAR***
+        // Pause before next iteration. Increase value for slower
+        // breathing; decrease for faster breathing.
+        misty.Pause(150);
+    }
+
+    // Re-registers for the breathingLED timer event, so Misty's LED
+    // continues breathing until the skill ends.
+    misty.RegisterTimerEvent("breathingLED", 1, false);
+}
+
+// Registers for a timer event called breathingLED, and invokes the
+// _breathingLED() callback after 1 millisecond.
+misty.RegisterTimerEvent("breathingLED", 1, false);
+
+// Waves Misty's right arm!
+function waveRightArm() {
+    misty.MoveArmDegrees("right", -80, 30); // Right arm up to wave
+    misty.Pause(3000); // Pause with arm up for 3 seconds
+    misty.MoveArmDegrees("both", 80, 30); // Both arms down
+}
+
+waveRightArm();
+
+// Invoke this function to start Misty recognizing faces.
+function _registerFaceRec() {
+    // Cancels any face recognition that's currently underway
+    misty.StopFaceRecognition();
+    // Starts face recognition
+    misty.StartFaceRecognition();
+    // If a FaceRecognition event includes a "PersonName" property,
+    // then Misty invokes the _FaceRec callback function.
+    misty.AddPropertyTest("FaceRec", "PersonName", "exists", "", "string");
+    // Registers for FaceRecognition events. Sets eventName to FaceRec,
+    // debounceMs to 1000, and keepAlive to false.
+    misty.RegisterEvent("FaceRec", "FaceRecognition", 1000, false);
+}
+
+// FaceRec events invoke this callback function.
+function _FaceRec(data) {
+    // Stores the value of the detected face
+    var faceDetected = data.PropertyTestResults[0].PropertyValue;
+    // Logs a debug message with the label of the detected face
+    misty.Debug("Misty sees " + faceDetected);
+
+    // Use the Command Center to train Misty to recognize your face.
+    // Then, replace <Your-Name> below with your own name! If Misty
+    // sees and recognizes you, she waves and looks happy.
+    if (faceDetected == "Jeff") {
+        misty.DisplayImage("e_Joy.jpg");
+        misty.PlayAudio("SkillsDeveloper.mp3");
+        waveRightArm();
+    }
+    if (faceDetected == "Tutu") {
+        misty.DisplayImage("e_Joy.jpg");
+        misty.PlayAudio("LookingGood.mp3");
+        waveRightArm();
+    }
+    // If Misty sees someone she doesn't know, she raises her eyebrow
+    // and plays a different sound.
+    else if (faceDetected == "unknown person") {
+        misty.DisplayImage("e_Contempt.jpg");
+        misty.PlayAudio("RobotHater.mp3");
+        misty.Pause(4000); // Pause with arm up for 4 seconds
+        misty.PlayAudio("WeaponCharge.wav");
+        misty.MoveArmDegrees("both", 0, 40); // Both arms out
+        misty.Pause(4000); // Pause with arm up for 4 seconds
+        misty.MoveArmDegrees("both", 80, 30); // Both arms down
+    };
+
+    misty.Pause(3000); // Pause for 3 seconds
+    // Rest to default eyes
+    misty.DisplayImage("e_DefaultContent.jpg");
+  
+    // Register for a timer event to invoke the _registerFaceRec
+    // callback function loop through the _registerFaceRec() again
+    // after 7000 milliseconds pass.
+    misty.RegisterTimerEvent("registerFaceRec", 7000, false);
+}
+// Starts Misty recognizing faces!
+_registerFaceRec();
